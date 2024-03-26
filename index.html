@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tiny Shaders</title>
+
+    <style>
+      body {
+        color: white;
+      }
+
+      .back-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 50%;
+        z-index: -1;
+        background-color: yellow;
+      }
+      .img {
+        position: absolute;
+        width: 100%;
+        height: 100px;
+        left: 0px;
+        top: 50%;
+        z-index: -1;
+        background-image: url("assets/wave.svg");
+        background-repeat: repeat-x;
+        background-size: 200px 100px;
+        filter: invert(98%) sepia(99%) saturate(7496%) hue-rotate(353deg)
+          brightness(106%) contrast(108%);
+      }
+      .back-bottom {
+        position: absolute;
+        left: 0;
+        bottom: 0px;
+        width: 100%;
+        height: 50%;
+        z-index: -2;
+        background-color: black;
+      }
+      .page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .main {
+        display: flex;
+        justify-content: center;
+        margin-top: 5%;
+        padding: 10px;
+        background-color: grey;
+        border-radius: 20px;
+      }
+
+      #code {
+        padding-left: 35px;
+      }
+
+      .line-numbers {
+        margin-left: 4px;
+        margin-top: 10px;
+        font-size: 0.75em;
+        position: absolute;
+        width: 20px;
+        text-align: right;
+        height: 100px;
+      }
+
+      .line-numbers span {
+        counter-increment: linenumber;
+      }
+
+      .line-numbers span::before {
+        content: counter(linenumber);
+        display: block;
+        color: white;
+      }
+
+      @keyframes move {
+        from {
+          transform: translateY(0) rotate(45deg);
+        }
+        to {
+          transform: translateY(45px) rotate(45deg);
+        }
+      }
+
+      @keyframes opacity {
+        from {
+          opacity: 0%;
+        }
+        50% {
+          opacity: 100%;
+        }
+        to {
+          opacity: 0%;
+        }
+      }
+
+      .arrow-block {
+        display: inline;
+      }
+
+      .arrow {
+        opacity: 0%;
+        position: absolute;
+        border: solid white;
+        border-width: 0 3px 3px 0;
+        display: block;
+        padding: 12px;
+        animation: opacity 1.5s infinite, move 1.5s infinite;
+      }
+      .arrow2 {
+        animation-delay: 0.5s;
+      }
+      .arrow3 {
+        animation-delay: 1s;
+      }
+
+      canvas,
+      form {
+        margin: 10px;
+      }
+
+      textarea {
+        color: white;
+        background-color: black;
+        padding: 10px;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="back-top"></div>
+    <div class="img"></div>
+    <div class="back-bottom"></div>
+
+    <div class="page">
+      <div class="main">
+        <canvas id="webgl" width="600" height="400"></canvas>
+        <form id="codeform">
+          <div class="line-numbers">
+            <span></span>
+          </div>
+          <textarea id="code" rows="20" cols="80"></textarea>
+          <div>
+            <input type="submit" value="Run Shader" />
+          </div>
+        </form>
+      </div>
+
+      <h1>Samples</h1>
+      <span class="arrow-block">
+        <i class="arrow"></i>
+        <i class="arrow arrow2"></i>
+        <i class="arrow arrow3"></i>
+      </span>
+    </div>
+
+    <script lang="js">
+      const codearea = document.getElementById("code");
+      code.value = "void shader(in vec3 Coord) {" +
+      "  vec2 uv = Coord.xy / Resolution;" +
+      "  Color = 0.5 + 0.5 * vec4(cos(Time + uv.xyx + vec3(0, 2, 4)), 1.0);" +
+      "}";
+
+      const lines = document.querySelector(".line-numbers");
+      createLines(codearea);
+
+      codearea.addEventListener("keyup", event => createLines(event.target));
+
+      function createLines(target) {
+        const num = target.value.split("\n").length;
+        lines.innerHTML = Array(num).fill("<span></span>").join("");
+      }
+
+      const canvas = document.querySelector("#webgl");
+      const gl = canvas.getContext("webgl2");
+
+      if (gl === null) {
+        console.error("WebGL not found!")
+      }
+
+      gl.viewport(0, 0, canvas.width, canvas.height);
+
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      const pos=[1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0];
+      const vertices = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertices);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+
+      document.getElementById("codeform").addEventListener("submit", runShader);
+
+      let frame = null;
+      runShader(new Event(0));
+
+      function runShader(ev) {
+        ev.preventDefault();
+
+        const vertex_source = `#version 300 es
+        in vec2 pos;
+        void main() {
+          gl_Position = vec4(pos, 0.0, 1.0);
+        }
+        `;
+
+        const frag_header = `#version 300 es
+        precision highp float;
+
+        uniform float Time;
+        uniform float TimeDelta;
+        uniform float FrameRate;
+        uniform vec2 Resolution;
+
+        out vec4 Color;
+
+        void shader(in vec3 Coord);
+
+        void main() {
+          shader(gl_FragCoord.xyz);
+        }
+
+        `;
+
+        const code = document.querySelector("#code").value;
+
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, vertex_source);
+        gl.compileShader(vs);
+
+        if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+          alert("Error: " + gl.getShaderInfoLog(vs));
+        }
+
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, frag_header + code);
+        gl.compileShader(fs);
+
+        if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+          alert("Error: " + gl.getShaderInfoLog(vs));
+        }
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          alert("Error: " + gl.getProgramInfoLog(prog));
+        }
+
+        gl.useProgram(prog);
+
+        const initial_time = performance.now();
+        let last_time = initial_time;
+        let time_delta = 0;
+
+        const pos_loc = gl.getAttribLocation(prog, "pos");
+        gl.vertexAttribPointer(pos_loc, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(pos_loc);
+
+        gl.uniform2f(gl.getUniformLocation(prog, "Resolution"), canvas.width, canvas.height);
+
+        function update() {
+          const time = performance.now() - initial_time;
+          time_delta = time - last_time;
+          last_time = time;
+
+          gl.uniform1f(gl.getUniformLocation(prog, "Time"), time / 1000.0);
+          gl.uniform1f(gl.getUniformLocation(prog, "TimeDelta"), time_delta / 1000.0);
+          gl.uniform1f(gl.getUniformLocation(prog, "FrameRate"), 1000.0 / time_delta);
+
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+          frame = requestAnimationFrame(update);
+        }
+
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(update);
+      }
+    </script>
+  </body>
+</html>
