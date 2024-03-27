@@ -111,6 +111,27 @@
         animation-delay: 1s;
       }
 
+      .samples {
+        margin-top: 7%;
+        display: grid;
+        gap: 50px;
+        grid-template-columns: auto auto auto;
+      }
+
+      .sample {
+        align-items: center;
+        padding: 20px;
+        background-color: grey;
+        border-radius: 10px;
+      }
+
+      .sample a {
+        display: block;
+        text-align: center;
+        text-decoration: none;
+        color: cyan;
+      }
+
       canvas,
       form {
         margin: 10px;
@@ -149,14 +170,62 @@
         <i class="arrow arrow2"></i>
         <i class="arrow arrow3"></i>
       </span>
+
+      <div class="samples">
+        <div class="sample">
+          <img src="assets/wave.svg" width="200" height="200" />
+          <a href="?name=rainbow">Rainbow</a>
+        </div>
+        <div class="sample">
+          <img src="assets/wave.svg" width="200" height="200" />
+          <a href="?name=mandelbrot">Mandelbrot</a>
+        </div>
+        <div class="sample">Hello there</div>
+        <div class="sample">Hello there</div>
+        <div class="sample">Hello there</div>
+        <div class="sample">Hello there</div>
+      </div>
     </div>
 
     <script lang="js">
+      function sample(name) {
+        switch (name) {
+          case "rainbow":
+            return "void shader(in vec3 Coord) {\n" +
+              "  vec2 uv = Coord.xy / Resolution;\n" +
+              "  Color = 0.5 + 0.5 * vec4(cos(Time + uv.xyx + vec3(0, 2, 4)), 1.0);\n" +
+              "}\n";
+            break;
+          case "mandelbrot":
+            return "void shader(in vec3 Coord) {\n" +
+              "  vec2 uv = Coord.xy / Resolution * 2.0;\n\n" +
+
+              "  float real = uv.x - 1.5;\n" +
+              "  float imaginary = uv.y - 1.0;\n\n" +
+
+              "  vec2 coord = vec2(real, imaginary);\n"+
+              "  vec2 init = coord;\n\n"+
+
+              "  for (float iter = 0.0; iter < 1000.0; ++iter) {\n"+
+              "    coord = vec2(\n"+
+              "      coord.x * coord.x - coord.y * coord.y,\n"+
+              "      2.0 * coord.x * coord.y)\n"+
+              "      + init;\n"+
+              "  }\n\n"+
+
+              "  float l = length(coord);\n"+
+              "  if (l < 4.0) l = 0.0;\n"+
+              "  else l = 1.0;\n\n"+
+
+              "  Color = vec4(l, l, l, 1.0);\n"+
+              "}\n";
+            break;
+        }
+      }
+
       const codearea = document.getElementById("code");
-      code.value = "void shader(in vec3 Coord) {" +
-      "  vec2 uv = Coord.xy / Resolution;" +
-      "  Color = 0.5 + 0.5 * vec4(cos(Time + uv.xyx + vec3(0, 2, 4)), 1.0);" +
-      "}";
+      const sample_name = new URL(window.location.href).searchParams;
+      code.value = sample(sample_name.get("name") ?? "rainbow");
 
       const lines = document.querySelector(".line-numbers");
       createLines(codearea);
