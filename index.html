@@ -171,26 +171,12 @@
         <i class="arrow arrow3"></i>
       </span>
 
-      <div class="samples">
-        <div class="sample">
-          <img src="assets/rainbow.jpg" width="200" height="200" />
-          <a href="?name=rainbow">Rainbow</a>
-        </div>
-        <div class="sample">
-          <img src="assets/mouse.jpg" width="200" height="200" />
-          <a href="?name=mouse">Mouse</a>
-        </div>
-        <div class="sample">
-          <img src="assets/mandelbrot.jpg" width="200" height="200" />
-          <a href="?name=mandelbrot">Mandelbrot</a>
-        </div>
-        <div class="sample">Hello there</div>
-        <div class="sample">Hello there</div>
-        <div class="sample">Hello there</div>
-      </div>
+      <div class="samples"></div>
     </div>
 
     <script lang="js">
+      const sampleList = ["rainbow", "mouse", "mandelbrot", "random"];
+
       function sample(name) {
         switch (name) {
           case "rainbow":
@@ -228,9 +214,42 @@
 
               "  Color = vec4(l, l, l, 1.0);\n"+
               "}\n";
-            break;
+            case "random":
+              return "// https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner\n" +
+                "float rand(vec2 co) {\n" +
+                "  return fract(sin(dot(co ,vec2(12.9898, 78.233))) * 43758.5453);\n" +
+                "}\n\n" +
+
+                "void shader(in vec3 Coord) {\n" +
+                "  vec2 uv = Coord.xy / Resolution;\n" +
+                "  float val = rand(uv + Time * 0.5);\n" +
+                "  Color = vec4(vec3(val), 1.0);\n" +
+                "}\n";
+                break;
         }
       }
+
+      function createSample(samples, sampleName) {
+        const sample = document.createElement("div");
+        sample.classList.add("sample");
+
+        const img =document.createElement("img");
+        img.src = `assets/${sampleName}.jpg`;
+        img.width = 200;
+        img.height = 200;
+
+        const a = document.createElement("a");
+        a.href = `?name=${sampleName}`;
+        a.innerHTML = sampleName[0].toUpperCase() + sampleName.slice(1);
+
+        sample.appendChild(img);
+        sample.appendChild(a);
+
+        samples.appendChild(sample);
+      }
+
+      const samples = document.querySelector(".samples");
+      sampleList.forEach(sampleName => createSample(samples, sampleName));
 
       const codearea = document.getElementById("code");
       const sample_name = new URL(window.location.href).searchParams;
