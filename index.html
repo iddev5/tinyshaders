@@ -196,6 +196,12 @@
               "  Color = 0.5 + 0.5 * vec4(cos(Time + uv.xyx + vec3(0, 2, 4)), 1.0);\n" +
               "}\n";
             break;
+          case "mouse":
+            return "void shader(in vec3 Coord) {\n" +
+              "vec2 uv = Coord.xy / Resolution;\n" +
+              "Color = 0.5 + 0.5 * vec4(cos(MouseState.zzz + uv.xyx + vec3(0, 2, 4)), 1.0);\n" +
+              "}\n";
+            break;
           case "mandelbrot":
             return "void shader(in vec3 Coord) {\n" +
               "  vec2 uv = Coord.xy / Resolution * 2.0;\n\n" +
@@ -290,6 +296,7 @@
         uniform float TimeDelta;
         uniform float FrameRate;
         uniform vec2 Resolution;
+        uniform vec3 MouseState;
 
         out vec4 Color;
 
@@ -339,6 +346,28 @@
         gl.enableVertexAttribArray(pos_loc);
 
         gl.uniform2f(gl.getUniformLocation(prog, "Resolution"), canvas.width, canvas.height);
+
+        function convertXY(x, y) {
+          return [(x - canvas.width/2) / (canvas.width/2),
+            (canvas.height/2 - y) / (canvas.height/2)];
+        }
+
+        const handleMove = event => {
+          event.preventDefault();
+          gl.uniform3f(gl.getUniformLocation(prog, "MouseState"), event.clientX, ...convertXY(event.clientX, event.clientY));
+        };
+
+
+        const handleDown = event => {
+          event.preventDefault();
+          gl.uniform3f(gl.getUniformLocation(prog, "MouseState"), event.clientX, event.clientY, event.button);
+        };
+
+        canvas.removeEventListener("mousemove", handleMove);
+        canvas.removeEventListener("mousedown", handleDown);
+
+        canvas.addEventListener("mousemove", handleMove);
+        canvas.addEventListener("mousedown", handleDown);
 
         function update() {
           const time = performance.now() - initial_time;
