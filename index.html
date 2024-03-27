@@ -135,9 +135,10 @@
           <div class="line-numbers">
             <span></span>
           </div>
-          <textarea id="code" rows="20" cols="80"></textarea>
+          <textarea id="code" rows="20" cols="75"></textarea>
           <div>
             <input type="submit" value="Run Shader" />
+            <button id="screenshot">Screenshot</button>
           </div>
         </form>
       </div>
@@ -168,11 +169,25 @@
       }
 
       const canvas = document.querySelector("#webgl");
-      const gl = canvas.getContext("webgl2");
+      const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true});
 
       if (gl === null) {
         console.error("WebGL not found!")
       }
+
+      document.getElementById("screenshot").addEventListener("click", event => {
+        event.preventDefault();
+
+        const image_data = canvas.toDataURL("image/jpeg");
+
+        const a = document.createElement("a");
+        a.download = "screenshot.jpg";
+        a.href = image_data;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
 
       gl.viewport(0, 0, canvas.width, canvas.height);
 
